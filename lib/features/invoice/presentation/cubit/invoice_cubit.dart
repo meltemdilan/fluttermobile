@@ -88,24 +88,20 @@ class InvoiceCubit extends Cubit<InvoiceState> {
     }
   }
 
+  // GÜNCELLENEN METOD
   Future<void> fetchInvoiceById(int id) async {
+    emit(InvoiceLoading()); // Yükleniyor durumuna alıyoruz
     try {
       final invoice = await _dataSource.getInvoiceById(id);
 
-      if (state is InvoiceLoaded) {
-        emit(
-          (state as InvoiceLoaded).copyWith(
-            selectedInvoice: invoice,
-          ),
-        );
-      } else {
-        emit(
-          InvoiceLoaded(
-            invoices: List<InvoiceModel>.unmodifiable(_allInvoices),
-            selectedInvoice: invoice,
-          ),
-        );
-      }
+      // Gelen tek faturayı ekrandaki listeye tek eleman olarak aktarıyoruz
+      emit(
+        InvoiceLoaded(
+          invoices: List<InvoiceModel>.unmodifiable([invoice]),
+          selectedInvoice: invoice,
+          hasReachedMax: true,
+        ),
+      );
     } catch (e) {
       emit(
         InvoiceError(

@@ -21,6 +21,96 @@ class InvoiceListView extends StatelessWidget {
     );
   }
 
+  // Fatura Detay Modalı
+  void _showInvoiceDetailBottomSheet(BuildContext context, InvoiceModel invoice) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bottomSheetContext) => Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Fatura #${invoice.id ?? "-"}',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                Chip(
+                  label: Text(
+                    invoice.invoiceType ?? 'SATIŞ',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  backgroundColor: Colors.indigo,
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            _buildDetailRow('Müşteri / Firma:', invoice.customerName.isNotEmpty ? invoice.customerName : 'Belirtilmedi'),
+            _buildDetailRow('VKN / TCKN:', invoice.vknTckn ?? 'Belirtilmedi'),
+            _buildDetailRow('Vergi Dairesi:', invoice.taxOffice ?? 'Belirtilmedi'),
+            _buildDetailRow('Şehir:', invoice.city ?? 'Belirtilmedi'),
+            _buildDetailRow('Senaryo:', invoice.scenario ?? 'TİCARİ FATURA'),
+            const Divider(height: 24),
+            _buildDetailRow('Ara Tutar:', '${invoice.amount ?? 0.0} ₺'),
+            _buildDetailRow('KDV (%20):', '${invoice.taxAmount ?? 0.0} ₺'),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Genel Toplam:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(
+                  '${invoice.totalAmount ?? invoice.amount ?? 0.0} ₺',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
+                onPressed: () => Navigator.pop(bottomSheetContext),
+                child: const Text('Kapat', style: TextStyle(color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -117,47 +207,65 @@ class InvoiceListView extends StatelessWidget {
                   );
                 } else if (state is InvoiceLoaded) {
                   if (state.invoices.isEmpty) {
-                    return const Center(child: Text('Kayıtlı fatura bulunamadı.'));
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        await context.read<InvoiceCubit>().fetchMyInvoices();
+                      },
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: const [
+                          SizedBox(height: 200),
+                          Center(child: Text('Kayıtlı fatura bulunamadı.')),
+                        ],
+                      ),
+                    );
                   }
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: state.invoices.length,
-                    itemBuilder: (context, index) {
-                      final inv = state.invoices[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          leading: const CircleAvatar(
-                            child: Icon(Icons.receipt_long),
-                          ),
-                          title: Text(
-                            inv.customerName.isNotEmpty ? inv.customerName : 'Müşteri Belirtilmedi',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text('ID: ${inv.id ?? "-"} | Şehir: ${inv.city ?? "Belirtilmedi"}'),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                '${inv.totalAmount ?? inv.amount} ₺',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.indigo),
-                              ),
-                              if (inv.taxAmount != null)
-                                Text(
-                                  'KDV: ${inv.taxAmount} ₺',
-                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                ),
-                            ],
-                          ),
-                          onTap: () {
-                            if (inv.id != null) {
-                              context.read<InvoiceCubit>().fetchInvoiceById(inv.id!);
-                            }
-                          },
-                        ),
-                      );
+                  
+                  // Ekranı aşağı kaydırınca (Pull to refresh) tüm listeyi tekrar çeker
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      await context.read<InvoiceCubit>().fetchMyInvoices();
                     },
+                    child: ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(12),
+                      itemCount: state.invoices.length,
+                      itemBuilder: (context, index) {
+                        final inv = state.invoices[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ListTile(
+                            leading: const CircleAvatar(
+                              child: Icon(Icons.receipt_long),
+                            ),
+                            title: Text(
+                              inv.customerName.isNotEmpty ? inv.customerName : 'Müşteri Belirtilmedi',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Text('ID: ${inv.id ?? "-"} | Şehir: ${inv.city ?? "Belirtilmedi"}'),
+                            trailing: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '${inv.totalAmount ?? inv.amount} ₺',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.indigo),
+                                ),
+                                if (inv.taxAmount != null)
+                                  Text(
+                                    'KDV: ${inv.taxAmount} ₺',
+                                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                  ),
+                              ],
+                            ),
+                            onTap: () {
+                              // Tıklandığında faturayı detay kartıyla gösterir
+                              _showInvoiceDetailBottomSheet(context, inv);
+                            },
+                          ),
+                        );
+                      },
+                    ),
                   );
                 }
                 return const SizedBox.shrink();

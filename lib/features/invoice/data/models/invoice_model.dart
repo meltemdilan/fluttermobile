@@ -35,36 +35,42 @@ class InvoiceModel {
           ? json['id'] 
           : int.tryParse(json['id']?.toString() ?? ''),
       userId: json['userId']?.toString() ?? json['UserId']?.toString(),
-      customerName: json['customerName'] ?? json['CustomerName'] ?? '',
-      amount: (json['amount'] ?? json['Amount'] as num?)?.toDouble() ?? 0.0,
-      taxAmount: (json['taxAmount'] ?? json['TaxAmount'] as num?)?.toDouble(),
-      totalAmount: (json['totalAmount'] ?? json['TotalAmount'] as num?)?.toDouble(),
-      city: json['city'] ?? json['City'],
-      invoiceType: json['invoiceType'] ?? json['InvoiceType'] ?? 'SATIŞ',
-      scenario: json['scenario'] ?? json['Scenario'] ?? 'TİCARİ FATURA',
+      customerName: json['customerName']?.toString() ?? json['CustomerName']?.toString() ?? '',
+      amount: double.tryParse((json['amount'] ?? json['Amount'])?.toString() ?? '0') ?? 0.0,
+      taxAmount: double.tryParse((json['taxAmount'] ?? json['TaxAmount'])?.toString() ?? ''),
+      totalAmount: double.tryParse((json['totalAmount'] ?? json['TotalAmount'])?.toString() ?? ''),
+      city: json['city']?.toString() ?? json['City']?.toString(),
+      invoiceType: json['invoiceType']?.toString() ?? json['InvoiceType']?.toString() ?? 'SATIŞ',
+      scenario: json['scenario']?.toString() ?? json['Scenario']?.toString() ?? 'TİCARİ FATURA',
       invoiceDate: json['invoiceDate']?.toString(),
-      currency: json['currency'] ?? json['Currency'] ?? 'TRY',
-      vknTckn: json['vknTckn'] ?? json['VknTckn'],
-      taxOffice: json['taxOffice'] ?? json['TaxOffice'],
+      currency: json['currency']?.toString() ?? json['Currency']?.toString() ?? 'TRY',
+      vknTckn: json['vknTckn']?.toString() ?? json['VknTckn']?.toString(),
+      taxOffice: json['taxOffice']?.toString() ?? json['TaxOffice']?.toString(),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      if (id != null && id != 0) 'id': id,
-      if (userId != null && userId!.isNotEmpty) 'userId': userId,
+    final Map<String, dynamic> data = {
       'customerName': customerName,
       'amount': amount,
-      'city': city ?? 'İstanbul',
-      'invoiceType': invoiceType ?? 'SATIŞ',
-      'scenario': scenario ?? 'TİCARİ FATURA',
-      'invoiceDate': invoiceDate ?? DateTime.now().toIso8601String(),
+      'city': (city != null && city!.isNotEmpty) ? city : 'İstanbul',
+      'invoiceType': (invoiceType != null && invoiceType!.isNotEmpty) ? invoiceType : 'SATIŞ',
+      'scenario': (scenario != null && scenario!.isNotEmpty) ? scenario : 'TİCARİ FATURA',
       'currency': currency ?? 'TRY',
       'vknTckn': vknTckn ?? '',
       'taxOffice': taxOffice ?? '',
-      'filePath': '',
       'taxAmount': taxAmount ?? (amount * 0.20),
       'totalAmount': totalAmount ?? (amount * 1.20),
     };
+
+    if (id != null && id! > 0) {
+      data['id'] = id;
+    }
+
+    if (userId != null && userId!.isNotEmpty) {
+      data['userId'] = userId;
+    }
+
+    return data;
   }
 }
